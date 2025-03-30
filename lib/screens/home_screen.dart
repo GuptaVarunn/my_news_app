@@ -15,7 +15,7 @@ class NewsHomePage extends StatefulWidget {
 }
 
 class _NewsHomePageState extends State<NewsHomePage> {
-  String selectedCategory = 'general';
+  String selectedCategory = 'home';
   String? userEmail;
   List<NewsArticle> articles = [];
   bool isLoading = true;
@@ -63,7 +63,37 @@ class _NewsHomePageState extends State<NewsHomePage> {
     });
 
     final apiKey = 'b883008f0ad94021b4c6d4c651752a69'; // Replace with your actual API key
-    final url = 'https://newsapi.org/v2/top-headlines?country=us&category=$selectedCategory&apiKey=$apiKey';
+    var url = 'https://newsapi.org/v2/top-headlines?country=in&category=$selectedCategory&apiKey=$apiKey';
+
+
+    switch (selectedCategory) {
+      case 'Home':
+        url = 'https://newsapi.org/v2/everything?q=india&apiKey=$apiKey';
+        break;
+      case 'India':
+        url = 'https://newsapi.org/v2/everything?q=india&language=en&sortBy=publishedAt&apiKey=$apiKey';
+        break;
+      case 'Local':
+        url = 'https://newsapi.org/v2/everything?q=mumbai&sortBy=publishedAt&apiKey=$apiKey';
+        break;
+      case 'Sports':
+        url = 'https://newsapi.org/v2/top-headlines?category=sports&apiKey=$apiKey';
+        break;
+      case 'Technology':
+        url = 'https://newsapi.org/v2/top-headlines?category=technology&apiKey=$apiKey';
+        break;
+      case 'Health':
+        url = 'https://newsapi.org/v2/everything?q=health&sortBy=publishedAt&apiKey=$apiKey';
+        break;
+      case 'Entertainment':
+        url = 'https://newsapi.org/v2/everything?q=entertainment&sortBy=publishedAt&apiKey=$apiKey';
+        break;
+
+      
+      default:
+        url = 'https://newsapi.org/v2/everything?q=india&apiKey=$apiKey';
+    }
+
 
     try {
       final response = await http.get(Uri.parse(url));
@@ -132,7 +162,7 @@ class _NewsHomePageState extends State<NewsHomePage> {
             scrollDirection: Axis.horizontal,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: ['general', 'business', 'sports', 'technology']
+              children: ['Home', 'India', 'Local', 'Sports', 'Technology', 'Health', 'Entertainment']
                   .map((category) {
                 return Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 10),

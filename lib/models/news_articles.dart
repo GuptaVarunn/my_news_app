@@ -6,12 +6,14 @@ class NewsArticle {
   final String source;
   final String link;
   final String imageUrl;
+  final String description;
 
   NewsArticle({
     required this.title,
     required this.source,
     required this.link,
     required this.imageUrl,
+    this.description = '',  // Optional with default value
   });
 
   // ✅ Fix: Correctly map JSON fields
