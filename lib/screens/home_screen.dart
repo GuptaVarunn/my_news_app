@@ -1,3 +1,5 @@
+// ignore_for_file: unused_import
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -7,7 +9,8 @@ import '../utils/shared_prefs.dart';
 import '../config/api_config.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:share_plus/share_plus.dart'; 
 
 class NewsHomePage extends StatefulWidget {
   const NewsHomePage({super.key});
@@ -22,12 +25,51 @@ class _NewsHomePageState extends State<NewsHomePage> {
   List<NewsArticle> articles = [];
   bool isLoading = true;
   String? error;
+  bool isDarkMode = false;
+  String searchQuery = '';
+  TextEditingController searchController = TextEditingController();
+  List<NewsArticle> filteredArticles = [];
 
   @override
   void initState() {
     super.initState();
     _loadUser();
     _fetchNews();
+    _loadThemePreference();
+  }
+
+  void _loadThemePreference() async {
+    final darkMode = await SharedPrefsHelper.getDarkMode();
+    setState(() {
+      isDarkMode = darkMode;
+    });
+  }
+
+  void _toggleTheme() {
+    setState(() {
+      isDarkMode = !isDarkMode;
+      SharedPrefsHelper.setDarkMode(isDarkMode);
+    });
+  }
+
+  void _filterArticles() {
+    if (searchQuery.isEmpty) {
+      filteredArticles = articles;
+    } else {
+      filteredArticles = articles
+          .where((article) =>
+              article.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              article.description.toLowerCase().contains(searchQuery.toLowerCase()))
+          .toList();
+    }
+  }
+
+  // Add this method for sharing
+  void _shareArticle(NewsArticle article) {
+    Share.share(
+      '${article.title}\n\nRead more at: ${article.link}',
+      subject: article.title,
+    );
   }
 
   void _loadUser() async {
@@ -68,28 +110,28 @@ class _NewsHomePageState extends State<NewsHomePage> {
 
     switch (selectedCategory) {
       case 'Home':
-        url = '${ApiConfig.baseUrl}/search?q=india&lang=en&country=in&max=10&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=india news&lang=en&country=in&max=50&apikey=$apiKey';
         break;
       case 'India':
-        url = '${ApiConfig.baseUrl}/search?q=india news&in=title&lang=en&country=in&max=10&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?lang=en&country=in&max=50&apikey=$apiKey';
         break;
       case 'Local':
-        url = '${ApiConfig.baseUrl}/search?q=mumbai&in=title&lang=en&country=in&max=10&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=(mumbai OR maharashtra)&lang=en,mr&country=in&max=50&apikey=$apiKey';
         break;
       case 'Sports':
-        url = '${ApiConfig.baseUrl}/search?q=sports&in=title&lang=en&country=in&max=10&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?category=sports&lang=en&country=in&max=50&apikey=$apiKey';
         break;
       case 'Technology':
-        url = '${ApiConfig.baseUrl}/search?q=technology&in=title&lang=en&country=in&max=10&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?category=technology&lang=en&country=in&max=50&apikey=$apiKey';
         break;
       case 'Health':
-        url = '${ApiConfig.baseUrl}/search?q=health&in=title&lang=en&country=in&max=10&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?category=health&lang=en&country=in&max=50&apikey=$apiKey';
         break;
       case 'Entertainment':
-        url = '${ApiConfig.baseUrl}/search?q=entertainment&in=title&lang=en&country=in&max=10&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?category=entertainment&lang=en&country=in&max=50&apikey=$apiKey';
         break;
       default:
-        url = '${ApiConfig.baseUrl}/search?q=india&lang=en&country=in&max=10&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?lang=en&country=in&max=50&apikey=$apiKey';
     }
 
     try {
@@ -126,142 +168,117 @@ class _NewsHomePageState extends State<NewsHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('News App'),
-        backgroundColor: Colors.blueAccent,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _refreshNews,
-          ),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.person),
-            onSelected: (value) {
-              if (value == 'Logout') {
-                _logout();
-              } else {
-                _navigateToAuth();
-              }
-            },
-            itemBuilder: (context) => [
-              if (userEmail != null)
-                PopupMenuItem(value: 'Logout', child: Text('Logout')),
-              if (userEmail == null)
-                PopupMenuItem(value: 'Login', child: Text('Login / Sign Up')),
-            ],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: ['Home', 'India', 'Local', 'Sports', 'Technology', 'Health', 'Entertainment']
-                  .map((category) {
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 10),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedCategory == category
-                          ? Colors.blue
-                          : Colors.grey,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        selectedCategory = category;
-                      });
-                      _fetchNews();
-                    },
-                    child: Text(
-                      category.toUpperCase(),
-                      style: TextStyle(color: Colors.white),
-                    ),
+    return Theme(
+      data: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('News App'),
+          backgroundColor: isDarkMode ? Colors.grey[900] : Colors.blueAccent,
+          actions: [
+            IconButton(
+              icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
+              onPressed: _toggleTheme,
+            ),
+            IconButton(
+              icon: Icon(Icons.refresh),
+              onPressed: _refreshNews,
+            ),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.person),
+              onSelected: (value) {
+                if (value == 'Logout') {
+                  _logout();
+                } else {
+                  _navigateToAuth();
+                }
+              },
+              itemBuilder: (context) => [
+                if (userEmail != null)
+                  PopupMenuItem(value: 'Logout', child: Text('Logout')),
+                if (userEmail == null)
+                  PopupMenuItem(value: 'Login', child: Text('Login / Sign Up')),
+              ],
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.all(8.0),
+              child: TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search news...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              }).toList(),
+                  filled: true,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value;
+                    _filterArticles();
+                  });
+                },
+              ),
             ),
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _refreshNews,
-              child: error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(error!),
-                          SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _fetchNews,
-                            child: Text('Try Again'),
-                          ),
-                        ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: ['Home', 'India', 'Local', 'Sports', 'Technology', 'Health', 'Entertainment']
+                    .map((category) {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 10),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedCategory == category
+                            ? Colors.blue
+                            : Colors.grey,
                       ),
-                    )
-                  : isLoading
-                      ? Center(child: CircularProgressIndicator())
-                      : articles.isEmpty
-                          ? Center(child: Text('No news available'))
-                          : ListView.builder(
-                              itemCount: articles.length,
-                              itemBuilder: (context, index) {
-                                NewsArticle article = articles[index];
-                                return Card(
-                                  elevation: 4,
-                                  margin: EdgeInsets.all(10),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      if (article.imageUrl.isNotEmpty)
-                                        Image.network(
-                                          article.imageUrl,
-                                          height: 150,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
-                                              height: 150,
-                                              color: Colors.grey[300],
-                                              child: Icon(Icons.image_not_supported),
-                                            );
-                                          },
-                                        ),
-                                      ListTile(
-                                        title: Text(
-                                          article.title,
-                                          style: TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                        subtitle: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Padding(
-                                              padding: EdgeInsets.only(top: 8.0),
-                                              child: Text("Source: ${article.source}"),
-                                            ),
-                                          ],
-                                        ),
-                                        trailing: IconButton(
-                                          icon: Icon(Icons.bookmark_border, color: Colors.blueAccent),
-                                          onPressed: () {
-                                            _navigateToAuth();
-                                          },
-                                        ),
-                                        onTap: () {
-                                          launchURL(article.link);
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
+                      onPressed: () {
+                        setState(() {
+                          selectedCategory = category;
+                        });
+                        _fetchNews();
+                      },
+                      child: Text(
+                        category.toUpperCase(),
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _refreshNews,
+                child: error != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(error!),
+                            SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _fetchNews,
+                              child: Text('Try Again'),
                             ),
+                          ],
+                        ),
+                      )
+                    : isLoading
+                        ? Center(child: CircularProgressIndicator())
+                        : articles.isEmpty
+                            ? Center(child: Text('No news available'))
+                            : NewsList(articles: articles),  // Use the NewsList widget
             ),
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }

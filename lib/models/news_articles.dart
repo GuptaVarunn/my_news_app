@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/url_launcher.dart';
+import 'dart:math';
+import 'package:share_plus/share_plus.dart';  // Add this import
 
 class NewsArticle {
   final String title;
@@ -8,6 +10,7 @@ class NewsArticle {
   final String imageUrl;
   final String description;
   final String publishedAt;
+  final String sourceLogo;  // Add this field
 
   NewsArticle({
     required this.title,
@@ -16,16 +19,21 @@ class NewsArticle {
     required this.imageUrl,
     required this.description,
     required this.publishedAt,
+    this.sourceLogo = '',  // Default empty string
   });
 
   factory NewsArticle.fromJson(Map<String, dynamic> json) {
+    final sourceName = json['source']?['name'] ?? 'Unknown Source';
+    final imageUrl = json['image'] ?? '';
+    
     return NewsArticle(
       title: json['title'] ?? 'No Title',
-      source: json['source']?['name'] ?? 'Unknown Source',
+      source: sourceName,
       link: json['url'] ?? '',
-      imageUrl: json['image'] ?? '',  // GNews uses 'image' instead of 'urlToImage'
+      imageUrl: imageUrl.isNotEmpty ? imageUrl : '',  // Keep empty if no image
       description: json['description'] ?? '',
       publishedAt: json['publishedAt'] ?? '',
+      sourceLogo: 'https://logo.clearbit.com/$sourceName.com',  // Fetch logo using source name
     );
   }
 }
@@ -33,6 +41,13 @@ class NewsList extends StatelessWidget {
   final List<NewsArticle> articles;
 
   const NewsList({super.key, required this.articles});
+
+  void _shareArticle(NewsArticle article) {
+    Share.share(
+      '${article.title}\n\nRead more at: ${article.link}',
+      subject: article.title,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,50 +59,112 @@ class NewsList extends StatelessWidget {
         return Card(
           elevation: 4,
           margin: EdgeInsets.all(10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              article.imageUrl.isNotEmpty
-                  ? Image.network(
-                      article.imageUrl,
-                      height: 150,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(height: 150, color: Colors.grey), // Handle missing images
+              ClipRRect(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                child: article.imageUrl.isNotEmpty
+                    ? AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Image.network(
+                          article.imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildFallbackImage(article);
+                          },
+                        ),
+                      )
+                    : _buildFallbackImage(article),
+              ),
               Padding(
-                padding: EdgeInsets.all(10),
+                padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            article.sourceLogo,
+                            width: 24,
+                            height: 24,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(Icons.newspaper, size: 24);
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          article.source,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                        Spacer(),
+                        Text(
+                          _formatDate(article.publishedAt),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
                     Text(
                       article.title,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
                         fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        height: 1.3,
                       ),
                     ),
-                    SizedBox(height: 5),
+                    SizedBox(height: 8),
                     Text(
-                      "Source: ${article.source}",
-                      style: TextStyle(color: Colors.grey),
+                      article.description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[800],
+                        height: 1.4,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 10),
+                    SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        ElevatedButton(
+                        ElevatedButton.icon(
                           onPressed: () => launchURL(article.link),
-                          child: Text('Read More'),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.bookmark_border,
-                            color: Colors.blueAccent,
+                          icon: Icon(Icons.read_more),
+                          label: Text('Read More'),
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                          onPressed: () {
-                            // Handle save for later logic (redirect to login if not signed in)
-                          },
+                        ),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.share),
+                              color: Colors.blueAccent,
+                              onPressed: () => _shareArticle(article),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.bookmark_border),
+                              color: Colors.blueAccent,
+                              onPressed: () {
+                                // Handle bookmarking
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -99,5 +176,49 @@ class NewsList extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+Widget _buildFallbackImage(NewsArticle article) {
+  final random = Random();
+  final fallbackImages = [
+    'lib/assets/breaking_news_1.jpeg',
+    'lib/assets/breaking_news_2.jpeg',
+    'lib/assets/breaking_news_3.jpeg',
+    'lib/assets/breaking_news_4.jpeg',
+    'lib/assets/breaking_news_5.jpeg',
+    'lib/assets/breaking_news_6.jpeg',
+  ];
+  
+  final randomImage = fallbackImages[random.nextInt(fallbackImages.length)];
+  
+  return Container(
+    height: 200,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      child: Image.asset(
+        randomImage,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          print('Error loading asset image: $error');  // Debug print
+          return Container(
+            color: Colors.grey[200],
+            child: Icon(Icons.newspaper, size: 80, color: Colors.grey[400]),
+          );
+        },
+      ),
+    ),
+  );
+}
+
+String _formatDate(String publishedAt) {
+  try {
+    final date = DateTime.parse(publishedAt);
+    return '${date.day}/${date.month}/${date.year}';
+  } catch (e) {
+    return '';
   }
 }

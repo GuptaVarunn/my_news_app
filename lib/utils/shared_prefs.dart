@@ -25,4 +25,14 @@ class SharedPrefsHelper {
     await prefs.remove('email');
     await prefs.remove('password');
   }
+
+  static Future<bool> getDarkMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('darkMode') ?? false;
+  }
+
+  static Future<void> setDarkMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('darkMode', value);
+  }
 }
