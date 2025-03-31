@@ -7,26 +7,28 @@ class NewsArticle {
   final String link;
   final String imageUrl;
   final String description;
+  final String publishedAt;
 
   NewsArticle({
     required this.title,
     required this.source,
     required this.link,
     required this.imageUrl,
-    this.description = '',  // Optional with default value
+    required this.description,
+    required this.publishedAt,
   });
 
-  // ✅ Fix: Correctly map JSON fields
   factory NewsArticle.fromJson(Map<String, dynamic> json) {
     return NewsArticle(
       title: json['title'] ?? 'No Title',
       source: json['source']?['name'] ?? 'Unknown Source',
       link: json['url'] ?? '',
-      imageUrl: json['urlToImage'] ?? '',
+      imageUrl: json['image'] ?? '',  // GNews uses 'image' instead of 'urlToImage'
+      description: json['description'] ?? '',
+      publishedAt: json['publishedAt'] ?? '',
     );
   }
 }
-
 class NewsList extends StatelessWidget {
   final List<NewsArticle> articles;
 

@@ -4,8 +4,10 @@ import 'dart:convert';
 import '../models/news_articles.dart';
 import '../utils/url_launcher.dart';
 import '../utils/shared_prefs.dart';
+import '../config/api_config.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; 
 
 class NewsHomePage extends StatefulWidget {
   const NewsHomePage({super.key});
@@ -15,7 +17,7 @@ class NewsHomePage extends StatefulWidget {
 }
 
 class _NewsHomePageState extends State<NewsHomePage> {
-  String selectedCategory = 'home';
+  String selectedCategory = 'Home';
   String? userEmail;
   List<NewsArticle> articles = [];
   bool isLoading = true;
@@ -40,7 +42,6 @@ class _NewsHomePageState extends State<NewsHomePage> {
     setState(() {
       userEmail = null;
     });
-
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => LoginPage()),
@@ -62,44 +63,40 @@ class _NewsHomePageState extends State<NewsHomePage> {
       error = null;
     });
 
-    final apiKey = 'b883008f0ad94021b4c6d4c651752a69'; // Replace with your actual API key
-    var url = 'https://newsapi.org/v2/top-headlines?country=in&category=$selectedCategory&apiKey=$apiKey';
-
+    final apiKey = dotenv.env['GNEWS_API_KEY'] ?? '';
+    String url;
 
     switch (selectedCategory) {
       case 'Home':
-        url = 'https://newsapi.org/v2/everything?q=india&apiKey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=india&lang=en&country=in&max=10&apikey=$apiKey';
         break;
       case 'India':
-        url = 'https://newsapi.org/v2/everything?q=india&language=en&sortBy=publishedAt&apiKey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=india news&in=title&lang=en&country=in&max=10&apikey=$apiKey';
         break;
       case 'Local':
-        url = 'https://newsapi.org/v2/everything?q=mumbai&sortBy=publishedAt&apiKey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=mumbai&in=title&lang=en&country=in&max=10&apikey=$apiKey';
         break;
       case 'Sports':
-        url = 'https://newsapi.org/v2/top-headlines?category=sports&apiKey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=sports&in=title&lang=en&country=in&max=10&apikey=$apiKey';
         break;
       case 'Technology':
-        url = 'https://newsapi.org/v2/top-headlines?category=technology&apiKey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=technology&in=title&lang=en&country=in&max=10&apikey=$apiKey';
         break;
       case 'Health':
-        url = 'https://newsapi.org/v2/everything?q=health&sortBy=publishedAt&apiKey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=health&in=title&lang=en&country=in&max=10&apikey=$apiKey';
         break;
       case 'Entertainment':
-        url = 'https://newsapi.org/v2/everything?q=entertainment&sortBy=publishedAt&apiKey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=entertainment&in=title&lang=en&country=in&max=10&apikey=$apiKey';
         break;
-
-      
       default:
-        url = 'https://newsapi.org/v2/everything?q=india&apiKey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=india&lang=en&country=in&max=10&apikey=$apiKey';
     }
-
 
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['status'] == 'ok') {
+        if (data['articles'] != null) {
           setState(() {
             articles = (data['articles'] as List)
                 .map((item) => NewsArticle.fromJson(item))
@@ -107,7 +104,7 @@ class _NewsHomePageState extends State<NewsHomePage> {
             isLoading = false;
           });
         } else {
-          throw Exception(data['message'] ?? 'Failed to load news');
+          throw Exception('No articles found');
         }
       } else {
         throw Exception('Failed to load news: ${response.statusCode}');

@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
-  runApp(MyApp());
+Future<void> main() async {
+  try {
+    await dotenv.load();
+    runApp(MyApp());
+  } catch (e) {
+    print('Error loading .env file: $e');
+    // Provide a fallback or show an error to the user
+    runApp(MyApp());
+  }
 }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
