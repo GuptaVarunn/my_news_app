@@ -110,28 +110,28 @@ class _NewsHomePageState extends State<NewsHomePage> {
 
     switch (selectedCategory) {
       case 'Home':
-        url = '${ApiConfig.baseUrl}/search?q=india news&lang=en&country=in&max=50&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=news&lang=en&country=in&apikey=$apiKey';
         break;
       case 'India':
-        url = '${ApiConfig.baseUrl}/top-headlines?lang=en&country=in&max=50&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?lang=en&country=in&apikey=$apiKey';
         break;
       case 'Local':
-        url = '${ApiConfig.baseUrl}/search?q=(mumbai OR maharashtra)&lang=en,mr&country=in&max=50&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/search?q=(mumbai OR maharashtra)&lang=en,mr&country=in&apikey=$apiKey';
         break;
       case 'Sports':
-        url = '${ApiConfig.baseUrl}/top-headlines?category=sports&lang=en&country=in&max=50&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?category=sports&lang=en&country=in&apikey=$apiKey';
         break;
       case 'Technology':
-        url = '${ApiConfig.baseUrl}/top-headlines?category=technology&lang=en&country=in&max=50&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?category=technology&lang=en&country=in&apikey=$apiKey';
         break;
       case 'Health':
-        url = '${ApiConfig.baseUrl}/top-headlines?category=health&lang=en&country=in&max=50&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?category=health&lang=en&country=in&apikey=$apiKey';
         break;
       case 'Entertainment':
-        url = '${ApiConfig.baseUrl}/top-headlines?category=entertainment&lang=en&country=in&max=50&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?category=entertainment&lang=en&country=in&apikey=$apiKey';
         break;
       default:
-        url = '${ApiConfig.baseUrl}/top-headlines?lang=en&country=in&max=50&apikey=$apiKey';
+        url = '${ApiConfig.baseUrl}/top-headlines?lang=en&country=in&apikey=$apiKey';
     }
 
     try {
