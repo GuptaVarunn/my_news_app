@@ -1,5 +1,6 @@
 // ignore_for_file: unused_import
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -172,32 +173,50 @@ class _NewsHomePageState extends State<NewsHomePage> {
       data: isDarkMode ? ThemeData.dark() : ThemeData.light(),
       child: Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           title: Text('News App'),
-          backgroundColor: isDarkMode ? Colors.grey[900] : Colors.blueAccent,
+          backgroundColor: Colors.blueAccent,  // Set the color to match login screen
           actions: [
-            IconButton(
-              icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
-              onPressed: _toggleTheme,
-            ),
-            IconButton(
-              icon: Icon(Icons.refresh),
-              onPressed: _refreshNews,
-            ),
-            PopupMenuButton<String>(
-              icon: Icon(Icons.person),
-              onSelected: (value) {
-                if (value == 'Logout') {
-                  _logout();
-                } else {
-                  _navigateToAuth();
+            StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return PopupMenuButton(
+                    icon: Icon(Icons.person),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        child: ListTile(
+                          leading: Icon(Icons.account_circle),
+                          title: Text(snapshot.data?.email ?? ''),
+                        ),
+                        enabled: false,
+                      ),
+                      PopupMenuItem(
+                        child: ListTile(
+                          leading: Icon(Icons.logout),
+                          title: Text('Logout'),
+                        ),
+                        onTap: () async {
+                          await FirebaseAuth.instance.signOut();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Logged out successfully')),
+                          );
+                        },
+                      ),
+                    ],
+                  );
                 }
+                return TextButton(
+                  child: Text('Sign In', style: TextStyle(color: Colors.white)),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginPage()),
+                    );
+                  },
+                );
               },
-              itemBuilder: (context) => [
-                if (userEmail != null)
-                  PopupMenuItem(value: 'Logout', child: Text('Logout')),
-                if (userEmail == null)
-                  PopupMenuItem(value: 'Login', child: Text('Login / Sign Up')),
-              ],
             ),
           ],
         ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../utils/url_launcher.dart';
 import 'dart:math';
-import 'package:share_plus/share_plus.dart';  // Add this import
+import 'package:share_plus/share_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../screens/login_screen.dart';  // Also needed for LoginPage
 
 class NewsArticle {
   final String title;
@@ -47,6 +49,38 @@ class NewsList extends StatelessWidget {
       '${article.title}\n\nRead more at: ${article.link}',
       subject: article.title,
     );
+  }
+
+  void _handleProtectedAction(BuildContext context, Function action) {
+    if (FirebaseAuth.instance.currentUser == null) {
+      // User not logged in, show login prompt
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Sign in Required'),
+          content: Text('Please sign in to use this feature.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginPage()),
+                );
+              },
+              child: Text('Sign In'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // User is logged in, perform the action
+      action();
+    }
   }
 
   @override
@@ -153,9 +187,10 @@ class NewsList extends StatelessWidget {
                         Row(
                           children: [
                             IconButton(
+                              // Use it for share and save buttons
                               icon: Icon(Icons.share),
                               color: Colors.blueAccent,
-                              onPressed: () => _shareArticle(article),
+                              onPressed: () => _handleProtectedAction(context, () => _shareArticle(article)),
                             ),
                             IconButton(
                               icon: Icon(Icons.bookmark_border),

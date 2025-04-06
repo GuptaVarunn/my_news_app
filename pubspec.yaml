@@ -43,6 +43,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^3.12.1
   cloud_firestore: ^5.6.5
+  firebase_auth: ^5.2.0  
 
 dev_dependencies:
   flutter_test:
@@ -68,9 +69,20 @@ flutter:
     - lib/assets/breaking_news_4.jpeg
     - lib/assets/breaking_news_5.jpeg
     - lib/assets/breaking_news_6.jpeg
+    - lib/assets/fonts/Roboto-Regular.ttf
+    - lib/assets/fonts/Roboto-Bold.ttf
+    - lib/assets/fonts/Roboto-Light.ttf
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
+  fonts: 
+    - family: Roboto
+      fonts:
+        - asset: lib/assets/fonts/Roboto-Regular.ttf
+        - asset: lib/assets/fonts/Roboto-Bold.ttf
+          weight: 700
+        - asset: lib/assets/fonts/Roboto-Light.ttf
+          weight: 300
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
