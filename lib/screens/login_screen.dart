@@ -50,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _login() async {
     if (!mounted) return;
-    
+
     try {
       final UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(
@@ -58,10 +58,9 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text,
       );
     
-      if (!mounted) return;  // Add this check
+      if (!mounted) return;
     
       if (userCredential.user != null) {
-        // Show welcome dialog before navigation
         await showDialog(
           context: context,
           barrierDismissible: false,
@@ -145,17 +144,20 @@ class _LoginPageState extends State<LoginPage> {
           },
         );
       }
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;  // Add this check
-      setState(() {
-        errorMessage = e.message ?? 'Authentication failed';
-      });
     } catch (e) {
-      if (!mounted) return;  // Add this check
+      if (!mounted) return;
       setState(() {
-        errorMessage = 'An error occurred';
+        errorMessage = e.toString();
       });
     }
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    captchaController.dispose();
+    super.dispose();
   }
 
   @override
