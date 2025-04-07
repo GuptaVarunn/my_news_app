@@ -25,10 +25,20 @@ class _LoginPageState extends State<LoginPage> {
   String captchaText = '';
   bool isLoading = false;
 
+  bool _isDarkMode = false;
+
   @override
   void initState() {
     super.initState();
     _generateCaptcha();
+    _loadThemePreference();
+  }
+
+  Future<void> _loadThemePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    });
   }
 
   void _generateCaptcha() {
@@ -39,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
-    if (!mounted) return;  // Add this check
+    if (!mounted) return;
     
     try {
       final UserCredential userCredential = await FirebaseAuth.instance
@@ -104,11 +114,22 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(30),
                         ),
                       ),
+                      // Inside the ElevatedButton onPressed callback in the welcome dialog
                       onPressed: () {
                         Navigator.of(context).pop();  // Close dialog
-                        // Navigate to home page and remove all previous routes
                         Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(builder: (context) => NewsHomePage()),
+                          MaterialPageRoute(
+                            builder: (context) => NewsHomePage(
+                              isDarkMode: _isDarkMode,
+                              onThemeToggle: () async {
+                                final prefs = await SharedPreferences.getInstance();
+                                setState(() {
+                                  _isDarkMode = !_isDarkMode;
+                                });
+                                await prefs.setBool('isDarkMode', _isDarkMode);
+                              },
+                            ),
+                          ),
                           (Route<dynamic> route) => false,
                         );
                       },
@@ -163,27 +184,25 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 Text("Login", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
                 SizedBox(height: 20),
-                TextField(
-                  controller: emailController,
+                TextFormField(
+                  controller: emailController,  // Changed from _emailController
                   decoration: InputDecoration(
-                    labelText: "Email",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    labelText: 'Email',
                     prefixIcon: Icon(Icons.email),
                   ),
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  autofillHints: const [AutofillHints.email],
                 ),
-                SizedBox(height: 15),
-                TextField(
-                  controller: passwordController,
-                  obscureText: !isPasswordVisible,
+                TextFormField(
+                  controller: passwordController,  // Changed from _passwordController
                   decoration: InputDecoration(
-                    labelText: "Password",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    labelText: 'Password',
                     prefixIcon: Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(isPasswordVisible ? Icons.visibility : Icons.visibility_off),
-                      onPressed: () => setState(() => isPasswordVisible = !isPasswordVisible),
-                    ),
                   ),
+                  obscureText: true,
+                  autocorrect: false,
+                  autofillHints: const [AutofillHints.password],
                 ),
                 SizedBox(height: 15),
                 Container(

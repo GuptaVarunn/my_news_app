@@ -40,4 +40,16 @@ class SavedArticlesService {
         .orderBy('savedAt', descending: true)
         .snapshots();
   }
+
+  Future<void> unsaveArticle(String articleId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestore
+        .collection('saved_articles')
+        .doc(user.uid)
+        .collection('articles')
+        .doc(articleId)
+        .delete();
+  }
 }

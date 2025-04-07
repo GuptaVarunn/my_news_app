@@ -24,10 +24,14 @@ class _SignupPageState extends State<SignupPage> {
   String captchaText = '';
   bool isLoading = false;
 
+  // Add at the top of _SignupPageState class
+  bool _isDarkMode = false;
+  
   @override
   void initState() {
     super.initState();
     _generateCaptcha();
+    _loadThemePreference();
   }
 
   void _generateCaptcha() {
@@ -55,6 +59,13 @@ class _SignupPageState extends State<SignupPage> {
       return false;
     }
     return true;
+  }
+
+  Future<void> _loadThemePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    });
   }
 
   Future<void> _signup() async {
@@ -103,9 +114,22 @@ class _SignupPageState extends State<SignupPage> {
 
         // Navigate to home page after delay
         await Future.delayed(Duration(seconds: 2));
+        if (!mounted) return;
+        
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => NewsHomePage()),
+          MaterialPageRoute(
+            builder: (context) => NewsHomePage(
+              isDarkMode: _isDarkMode,
+              onThemeToggle: () async {
+                final prefs = await SharedPreferences.getInstance();
+                setState(() {
+                  _isDarkMode = !_isDarkMode;
+                });
+                await prefs.setBool('isDarkMode', _isDarkMode);
+              },
+            ),
+          ),
         );
       }
     } on FirebaseAuthException catch (e) {

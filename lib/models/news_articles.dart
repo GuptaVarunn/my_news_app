@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/login_screen.dart';
 import '../services/saved_articles_service.dart';  // Add this import
+import '../utils/snackbar_helper.dart';
 
 class NewsArticle {
   final String title;
@@ -200,8 +201,9 @@ class NewsList extends StatelessWidget {
                                 context,
                                 () async {
                                   await SavedArticlesService().saveArticle(article);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Article saved successfully')),
+                                  showCustomSnackBar(
+                                    context,
+                                    '📰 Article saved to your collection!',
                                   );
                                 },
                               ),

@@ -1,8 +1,11 @@
 // ignore_for_file: unused_import, unused_element
 
+import 'dart:math';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:my_news_app/utils/snackbar_helper.dart';
 import 'dart:convert';
 import '../models/news_articles.dart';
 import '../utils/url_launcher.dart';
@@ -17,227 +20,201 @@ import 'package:share_plus/share_plus.dart';
 import 'saved_articles_screen.dart';
 
 class NewsHomePage extends StatefulWidget {
-  const NewsHomePage({super.key});
+  final bool isDarkMode;
+  final VoidCallback onThemeToggle;
+
+  const NewsHomePage({
+    Key? key,
+    required this.isDarkMode,
+    required this.onThemeToggle,
+  }) : super(key: key);
 
   @override
-  _NewsHomePageState createState() => _NewsHomePageState();
+  State<NewsHomePage> createState() => _NewsHomePageState();
 }
 
 class _NewsHomePageState extends State<NewsHomePage> {
   String selectedCategory = 'Home';
-  String? userEmail;
   List<NewsArticle> articles = [];
-  bool isLoading = true;
+  bool isLoading = false;
   String? error;
-  bool isDarkMode = false;
-  String searchQuery = '';
-  TextEditingController searchController = TextEditingController();
-  List<NewsArticle> filteredArticles = [];
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
     _fetchNews();
-    _loadThemePreference();
   }
 
-  void _loadThemePreference() async {
-    final darkMode = await SharedPrefsHelper.getDarkMode();
-    setState(() {
-      isDarkMode = darkMode;
-    });
-  }
-
-  void _toggleTheme() {
-    setState(() {
-      isDarkMode = !isDarkMode;
-      SharedPrefsHelper.setDarkMode(isDarkMode);
-    });
-  }
-
-  void _filterArticles() {
-    if (searchQuery.isEmpty) {
-      filteredArticles = articles;
-    } else {
-      filteredArticles = articles
-          .where((article) =>
-              article.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
-              article.description.toLowerCase().contains(searchQuery.toLowerCase()))
-          .toList();
-    }
-  }
-
-  // Add this method for sharing
-  void _shareArticle(NewsArticle article) {
-    Share.share(
-      '${article.title}\n\nRead more at: ${article.link}',
-      subject: article.title,
+  Future<void> _handleLogout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    
+    showCustomSnackBar(
+      context,
+      '👋 See you soon! Successfully logged out',
+      isSuccess: true,
     );
-  }
-
-  void _loadUser() async {
-    String? email = await SharedPrefsHelper.getUserEmail();
-    setState(() {
-      userEmail = email;
-    });
-  }
-
-  void _logout() async {
-    await SharedPrefsHelper.clearUserData();
-    setState(() {
-      userEmail = null;
-    });
-    Navigator.pushReplacement(
+    
+    Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => LoginPage()),
+      (route) => false,
     );
   }
 
-  void _navigateToAuth() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => userEmail == null ? SignupPage() : LoginPage(),
-      ),
-    ).then((_) => _loadUser());
-  }
-
+  // Update the _fetchNews method for local news
   Future<void> _fetchNews() async {
     setState(() {
       isLoading = true;
       error = null;
     });
 
-    final apiKey = dotenv.env['GNEWS_API_KEY'] ?? '';
-    String url;
-
-    switch (selectedCategory) {
-      case 'Home':
-        url = '${ApiConfig.baseUrl}/search?q=news&lang=en&country=in&apikey=$apiKey';
-        break;
-      case 'India':
-        url = '${ApiConfig.baseUrl}/top-headlines?lang=en&country=in&apikey=$apiKey';
-        break;
-      case 'Local':
-        url = '${ApiConfig.baseUrl}/search?q=(mumbai OR maharashtra)&lang=en,mr&country=in&apikey=$apiKey';
-        break;
-      case 'Sports':
-        url = '${ApiConfig.baseUrl}/top-headlines?category=sports&lang=en&country=in&apikey=$apiKey';
-        break;
-      case 'Technology':
-        url = '${ApiConfig.baseUrl}/top-headlines?category=technology&lang=en&country=in&apikey=$apiKey';
-        break;
-      case 'Health':
-        url = '${ApiConfig.baseUrl}/top-headlines?category=health&lang=en&country=in&apikey=$apiKey';
-        break;
-      case 'Entertainment':
-        url = '${ApiConfig.baseUrl}/top-headlines?category=entertainment&lang=en&country=in&apikey=$apiKey';
-        break;
-      default:
-        url = '${ApiConfig.baseUrl}/top-headlines?lang=en&country=in&apikey=$apiKey';
-    }
-
     try {
+      final apiKey = dotenv.env['GNEWS_API_KEY'];
+      if (apiKey == null) {
+        throw Exception('API key not found');
+      }
+
+      String category = selectedCategory.toLowerCase();
+      String lang = 'en';
+      String url;
+      
+      if (category == 'local') {
+        // Special handling for local news (Mumbai/Maharashtra)
+        url = 'https://gnews.io/api/v4/search?'
+          'q=(Mumbai OR Maharashtra)'
+          '&lang=$lang'
+          '&country=in'
+          '&apikey=$apiKey'
+          '&max=20';
+      } else {
+        final categoryMap = {
+          'home': 'general',
+          'india': 'nation',
+          'sports': 'sports',
+          'technology': 'technology',
+          'health': 'health',
+          'entertainment': 'entertainment'
+        };
+
+        final mappedCategory = categoryMap[category] ?? 'general';
+        url = 'https://gnews.io/api/v4/top-headlines?'
+          'category=$mappedCategory'
+          '&lang=$lang'
+          '&country=in'
+          '&apikey=$apiKey'
+          '&max=20';
+      }
+
       final response = await http.get(Uri.parse(url));
+      
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['articles'] != null) {
-          setState(() {
-            articles = (data['articles'] as List)
-                .map((item) => NewsArticle.fromJson(item))
-                .toList();
-            isLoading = false;
-          });
-        } else {
-          throw Exception('No articles found');
-        }
+        final List<dynamic> articlesData = data['articles'] ?? [];
+        
+        setState(() {
+          articles = articlesData.map((article) {
+            // Add fallback image logic
+            if (article['image'] == null || article['image'].toString().isEmpty) {
+              final random = Random().nextInt(6) + 1;
+              article['image'] = 'assets/breaking_news_$random.jpeg';
+            }
+            return NewsArticle.fromJson(article);
+          }).toList();
+          isLoading = false;
+        });
       } else {
-        throw Exception('Failed to load news: ${response.statusCode}');
+        setState(() {
+          error = 'Unable to load news. Please try again later.';
+          isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {
-        error = e.toString();
+        error = 'Connection error. Please check your internet connection.';
         isLoading = false;
+        articles = [];
       });
     }
   }
 
   Future<void> _refreshNews() async {
-    setState(() {
-      articles = [];
-    });
-    await _fetchNews();
+    return _fetchNews();
   }
 
+  // Update the AppBar in build method
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: isDarkMode ? ThemeData.dark() : ThemeData.light(),
-      child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: Text('News App'),
-          backgroundColor: Colors.blueAccent,
-          actions: [
-            StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.authStateChanges(),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return PopupMenuButton(
-                    icon: Icon(Icons.person),
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        child: ListTile(
-                          leading: Icon(Icons.account_circle),
-                          title: Text(snapshot.data?.email ?? ''),
-                        ),
-                        enabled: false,
-                      ),
-                      PopupMenuItem(
-                        child: ListTile(
-                          leading: Icon(Icons.logout),
-                          title: Text('Logout'),
-                        ),
-                        onTap: () async {
-                          await FirebaseAuth.instance.signOut();
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Logged out successfully')),
-                          );
-                        },
-                      ),
-                      PopupMenuItem(
-                        child: ListTile(
-                          leading: Icon(Icons.bookmark),
-                          title: Text('Saved Articles'),
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => SavedArticlesScreen()),
-                          );
-                        },
-                      ),
-                    ],
-                  );
-                }
-                return TextButton(
-                  child: Text('Sign In', style: TextStyle(color: Colors.white)),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => LoginPage()),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
+    final user = FirebaseAuth.instance.currentUser;
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'News App',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
-        body: Column(
-          children: [
-            SingleChildScrollView(
+        backgroundColor: Colors.blueAccent,
+        elevation: 2,
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: Icon(
+              widget.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              color: Colors.white,
+            ),
+            onPressed: widget.onThemeToggle,
+          ),
+          PopupMenuButton(
+            icon: Icon(Icons.account_circle, color: Colors.white),
+            itemBuilder: (context) => [
+              if (user != null) ...[
+                PopupMenuItem(
+                  child: ListTile(
+                    leading: Icon(Icons.bookmark),
+                    title: Text('Saved Articles'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SavedArticlesScreen()),
+                  ),
+                ),
+                PopupMenuItem(
+                  child: ListTile(
+                    leading: Icon(Icons.logout),
+                    title: Text('Logout'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onTap: () => _handleLogout(context),
+                ),
+              ] else
+                PopupMenuItem(
+                  child: ListTile(
+                    leading: Icon(Icons.login),
+                    title: Text('Sign In'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onTap: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => LoginPage()),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: widget.isDarkMode ? Colors.grey[850] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            margin: EdgeInsets.all(8),
+            child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -248,8 +225,11 @@ class _NewsHomePageState extends State<NewsHomePage> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: selectedCategory == category
-                            ? Colors.blue
-                            : Colors.grey,
+                            ? (widget.isDarkMode ? Colors.blue[700] : Colors.blue)
+                            : (widget.isDarkMode ? Colors.grey[700] : Colors.grey[300]),
+                        foregroundColor: selectedCategory == category
+                            ? Colors.white
+                            : (widget.isDarkMode ? Colors.white70 : Colors.black87),
                       ),
                       onPressed: () {
                         setState(() {
@@ -257,42 +237,51 @@ class _NewsHomePageState extends State<NewsHomePage> {
                         });
                         _fetchNews();
                       },
-                      child: Text(
-                        category.toUpperCase(),
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      child: Text(category.toUpperCase()),
                     ),
                   );
                 }).toList(),
               ),
             ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refreshNews,
-                child: error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(error!),
-                            SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _fetchNews,
-                              child: Text('Try Again'),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refreshNews,
+              child: error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            error!,
+                            style: TextStyle(
+                              color: widget.isDarkMode ? Colors.white70 : Colors.black87,
                             ),
-                          ],
-                        ),
-                      )
-                    : isLoading
-                        ? Center(child: CircularProgressIndicator())
-                        : articles.isEmpty
-                            ? Center(child: Text('No news available'))
-                            : NewsList(articles: articles),  // Use the NewsList widget
+                          ),
+                          SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _fetchNews,
+                            child: Text('Try Again'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : isLoading
+                      ? Center(child: CircularProgressIndicator())
+                      : articles.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No news available',
+                                style: TextStyle(
+                                  color: widget.isDarkMode ? Colors.white70 : Colors.black87,
+                                ),
+                              ),
+                            )
+                          : NewsList(articles: articles),
             ),
           ),
         ],
       ),
-    ),
-  );
+    );
   }
 }
