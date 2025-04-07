@@ -13,6 +13,9 @@ import 'signup_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:share_plus/share_plus.dart'; 
 
+// Add this import at the top with other imports
+import 'saved_articles_screen.dart';
+
 class NewsHomePage extends StatefulWidget {
   const NewsHomePage({super.key});
 
@@ -175,7 +178,7 @@ class _NewsHomePageState extends State<NewsHomePage> {
         appBar: AppBar(
           automaticallyImplyLeading: false,
           title: Text('News App'),
-          backgroundColor: Colors.blueAccent,  // Set the color to match login screen
+          backgroundColor: Colors.blueAccent,
           actions: [
             StreamBuilder<User?>(
               stream: FirebaseAuth.instance.authStateChanges(),
@@ -185,11 +188,11 @@ class _NewsHomePageState extends State<NewsHomePage> {
                     icon: Icon(Icons.person),
                     itemBuilder: (context) => [
                       PopupMenuItem(
-                        enabled: false,
                         child: ListTile(
                           leading: Icon(Icons.account_circle),
                           title: Text(snapshot.data?.email ?? ''),
                         ),
+                        enabled: false,
                       ),
                       PopupMenuItem(
                         child: ListTile(
@@ -201,6 +204,18 @@ class _NewsHomePageState extends State<NewsHomePage> {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Logged out successfully')),
+                          );
+                        },
+                      ),
+                      PopupMenuItem(
+                        child: ListTile(
+                          leading: Icon(Icons.bookmark),
+                          title: Text('Saved Articles'),
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => SavedArticlesScreen()),
                           );
                         },
                       ),
@@ -222,26 +237,6 @@ class _NewsHomePageState extends State<NewsHomePage> {
         ),
         body: Column(
           children: [
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search news...',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    searchQuery = value;
-                    _filterArticles();
-                  });
-                },
-              ),
-            ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(

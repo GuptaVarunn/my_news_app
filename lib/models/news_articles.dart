@@ -3,39 +3,39 @@ import '../utils/url_launcher.dart';
 import 'dart:math';
 import 'package:share_plus/share_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../screens/login_screen.dart';  // Also needed for LoginPage
+// ignore: unused_import
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../screens/login_screen.dart';
+import '../services/saved_articles_service.dart';  // Add this import
 
 class NewsArticle {
   final String title;
-  final String source;
-  final String link;
-  final String imageUrl;
   final String description;
-  final String publishedAt;
-  final String sourceLogo;  // Add this field
+  final String imageUrl;
+  final String link;
+  final DateTime publishedAt;
+  final String source;
+  final String sourceLogo;
 
   NewsArticle({
     required this.title,
-    required this.source,
-    required this.link,
-    required this.imageUrl,
     required this.description,
+    required this.imageUrl,
+    required this.link,
     required this.publishedAt,
+    this.source = '',  // Default empty string
     this.sourceLogo = '',  // Default empty string
   });
 
   factory NewsArticle.fromJson(Map<String, dynamic> json) {
-    final sourceName = json['source']?['name'] ?? 'Unknown Source';
-    final imageUrl = json['image'] ?? '';
-    
     return NewsArticle(
-      title: json['title'] ?? 'No Title',
-      source: sourceName,
-      link: json['url'] ?? '',
-      imageUrl: imageUrl.isNotEmpty ? imageUrl : '',  // Keep empty if no image
+      title: json['title'] ?? '',
       description: json['description'] ?? '',
-      publishedAt: json['publishedAt'] ?? '',
-      sourceLogo: 'https://logo.clearbit.com/$sourceName.com',  // Fetch logo using source name
+      imageUrl: json['image'] ?? '',
+      link: json['url'] ?? '',
+      publishedAt: DateTime.parse(json['publishedAt'] ?? DateTime.now().toIso8601String()),
+      source: json['source']?['name'] ?? '',
+      sourceLogo: '', // GNews API doesn't provide source logos
     );
   }
 }
@@ -192,12 +192,19 @@ class NewsList extends StatelessWidget {
                               color: Colors.blueAccent,
                               onPressed: () => _handleProtectedAction(context, () => _shareArticle(article)),
                             ),
+                            // In the NewsList class, update the bookmark IconButton:
                             IconButton(
                               icon: Icon(Icons.bookmark_border),
                               color: Colors.blueAccent,
-                              onPressed: () {
-                                // Handle bookmarking
-                              },
+                              onPressed: () => _handleProtectedAction(
+                                context,
+                                () async {
+                                  await SavedArticlesService().saveArticle(article);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Article saved successfully')),
+                                  );
+                                },
+                              ),
                             ),
                           ],
                         ),
@@ -249,11 +256,6 @@ Widget _buildFallbackImage(NewsArticle article) {
   );
 }
 
-String _formatDate(String publishedAt) {
-  try {
-    final date = DateTime.parse(publishedAt);
-    return '${date.day}/${date.month}/${date.year}';
-  } catch (e) {
-    return '';
-  }
+String _formatDate(DateTime publishedAt) {
+  return '${publishedAt.day}/${publishedAt.month}/${publishedAt.year}';
 }
