@@ -185,11 +185,11 @@ class _NewsHomePageState extends State<NewsHomePage> {
                     icon: Icon(Icons.person),
                     itemBuilder: (context) => [
                       PopupMenuItem(
+                        enabled: false,
                         child: ListTile(
                           leading: Icon(Icons.account_circle),
                           title: Text(snapshot.data?.email ?? ''),
                         ),
-                        enabled: false,
                       ),
                       PopupMenuItem(
                         child: ListTile(
