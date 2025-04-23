@@ -10,6 +10,8 @@ import '../models/news_articles.dart';
 import '../widgets/news_card.dart';
 
 class SavedArticlesScreen extends StatelessWidget {
+  const SavedArticlesScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

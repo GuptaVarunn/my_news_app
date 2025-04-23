@@ -24,10 +24,10 @@ class NewsHomePage extends StatefulWidget {
   final VoidCallback onThemeToggle;
 
   const NewsHomePage({
-    Key? key,
+    super.key,
     required this.isDarkMode,
     required this.onThemeToggle,
-  }) : super(key: key);
+  });
 
   @override
   State<NewsHomePage> createState() => _NewsHomePageState();
